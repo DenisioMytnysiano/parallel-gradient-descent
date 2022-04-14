@@ -17,4 +17,4 @@ jobs:
         dotnet-version: 5.0.x
      
     - uses: cake-build/cake-action@v1.4.0
-    - name: Cake Action
+      name: Cake Action
