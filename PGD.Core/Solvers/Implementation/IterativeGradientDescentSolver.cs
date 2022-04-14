@@ -1,28 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using MathNet.Numerics.LinearAlgebra;
+using Microsoft.Extensions.Options;
 using PGD.Core.Models.Interfaces;
 using PGD.Core.Solvers.Interfaces;
+using PGD.Core.Solvers.Options;
 
 namespace PGD.Core.Solvers.Implementation
 {
     public class IterativeGradientDescentSolver : IGradientDescentSolver
     {
         private readonly IModel _model;
-        private readonly double _lr;
-        private readonly int _epochs;
+        private readonly GradientDescentOptions _options;
 
-        public IterativeGradientDescentSolver(IModel model, double lr, int epochs)
+        public IterativeGradientDescentSolver(IModel model, IOptions<GradientDescentOptions> options)
         {
             _model = model;
-            _lr = lr;
-            _epochs = epochs;
+            _options = options.Value;
         }
 
         public Vector<double> Solve(Matrix<double> x, Vector<double> y)
         {
-            var losses = Vector<double>.Build.Dense(_epochs);
-            for (var i = 0; i < _epochs; i++)
+            var losses = Vector<double>.Build.Dense(_options.Epochs);
+            for (var i = 0; i < _options.Epochs; i++)
             {
                 var gradients = _model.ComputeGradients(x, y);
                 losses[i] = _model.ComputeLoss(x, y);
@@ -38,7 +38,7 @@ namespace PGD.Core.Solvers.Implementation
             var modelParams = model.GetParameters();
             foreach (var (parameterName, parameterValue) in modelParams)
                 model.UpdateParameter(parameterName,
-                    parameterValue - _lr * gradients.GetValueOrDefault(parameterName));
+                    parameterValue - _options.LearningRate * gradients.GetValueOrDefault(parameterName));
         }
     }
 }

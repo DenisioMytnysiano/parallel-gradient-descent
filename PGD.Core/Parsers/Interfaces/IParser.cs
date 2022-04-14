@@ -2,7 +2,7 @@
 
 namespace PGD.Core.Parsers.Interfaces
 {
-    interface IParser
+    public interface IParser
     {
         public (Matrix<double>, Vector<double>) Parse(string fileName);
     }

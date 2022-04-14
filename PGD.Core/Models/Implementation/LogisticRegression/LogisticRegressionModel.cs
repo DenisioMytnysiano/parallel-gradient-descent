@@ -14,8 +14,9 @@ namespace PGD.Core.Models.Implementation.LogisticRegression
 
         public LogisticRegressionModel()
         {
-            UpdateParameter(Bias, Vector<double>.Build.Dense(1));
-            UpdateParameter(Weights, Vector<double>.Build.Dense(10));
+            _modelParameters = new ModelParametersList(new List<ModelParameter>());
+            InitializeParameter(Bias, Vector<double>.Build.Dense(1));
+            InitializeParameter(Weights, Vector<double>.Build.Dense(10));
         }
 
         public Vector<double> Predict(Matrix<double> x)
@@ -34,9 +35,19 @@ namespace PGD.Core.Models.Implementation.LogisticRegression
             };
         }
 
+        private void InitializeParameter(string parameterName, Vector<double> values)
+        {
+            _modelParameters.CreateModelParameter(parameterName, values);
+        }
+
         public void UpdateParameter(string parameterName, Vector<double> values)
         {
             _modelParameters.UpdateModelParameter(parameterName, values);
+        }
+
+        public ModelParameter GetParameter(string parameterName)
+        {
+            return _modelParameters.GetModelParameter(parameterName);
         }
 
         public ModelParametersList GetParameters()

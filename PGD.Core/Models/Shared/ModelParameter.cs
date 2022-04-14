@@ -47,6 +47,19 @@ namespace PGD.Core.Models.Shared
             throw new ArgumentOutOfRangeException($"Model parameter with name '{name}' not found.");
         }
 
+        public void CreateModelParameter(string name, Vector<double> values)
+        {
+            if (!TryGetModelParameter(name, out var parameter)){
+                _modelParameters.Append(new ModelParameter
+                {
+                    Name = name,
+                    Values = values
+                });
+                }
+            else
+                throw new ArgumentException("Model parameter with name '{name}' is already present.");
+        }
+
         public void UpdateModelParameter(string name, Vector<double> values)
         {
             if (TryGetModelParameter(name, out var modelParameter))
