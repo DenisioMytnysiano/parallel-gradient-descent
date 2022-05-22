@@ -17,10 +17,10 @@ namespace PGD.Core.Parsers.Implementation.Csv
         public (Matrix<double>, Vector<double>) Parse(string fileName)
         {
             var matrix = DelimitedReader.Read<double>(
-                fileName, false, 
+                fileName, false,
                 _csvOptions.Value.Delimiter, _csvOptions.Value.HasHeaders);
-            var y = matrix.Column(matrix.ColumnCount);
-            var x = matrix.RemoveColumn(matrix.ColumnCount);
+            var y = matrix.Column(matrix.ColumnCount - 1);
+            var x = matrix.RemoveColumn(matrix.ColumnCount - 1);
             return (x, y);
         }
     }

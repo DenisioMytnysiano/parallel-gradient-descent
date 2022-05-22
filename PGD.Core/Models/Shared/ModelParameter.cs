@@ -21,8 +21,8 @@ namespace PGD.Core.Models.Shared
 
     public class ModelParametersList : IEnumerable<ModelParameter>
     {
-        private readonly IEnumerable<ModelParameter> _modelParameters;
-
+        private IEnumerable<ModelParameter> _modelParameters;
+        
         public ModelParametersList(IEnumerable<ModelParameter> modelParameters)
         {
             _modelParameters = modelParameters;
@@ -50,7 +50,7 @@ namespace PGD.Core.Models.Shared
         public void CreateModelParameter(string name, Vector<double> values)
         {
             if (!TryGetModelParameter(name, out var parameter)){
-                _modelParameters.Append(new ModelParameter
+                _modelParameters = _modelParameters.Append(new ModelParameter
                 {
                     Name = name,
                     Values = values

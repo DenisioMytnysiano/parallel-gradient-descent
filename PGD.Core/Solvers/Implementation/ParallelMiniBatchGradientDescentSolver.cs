@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using MathNet.Numerics.LinearAlgebra;
 using Microsoft.Extensions.Options;
 using PGD.Core.Models.Interfaces;
@@ -16,52 +16,50 @@ namespace PGD.Core.Solvers.Implementation
     public class ParallelMiniBatchGradientDescentSolver : IGradientDescentSolver
     {
         private readonly ParallelMiniBatchGradientDescentOptions _options;
-        private readonly IModel _model;
 
-        public ParallelMiniBatchGradientDescentSolver(IModel model,
-            IOptions<ParallelMiniBatchGradientDescentOptions> options)
+        public ParallelMiniBatchGradientDescentSolver(IOptions<ParallelMiniBatchGradientDescentOptions> options)
         {
-            _model = model;
             _options = options.Value;
         }
 
-        public Vector<double> Solve(Matrix<double> x, Vector<double> y)
+        public Vector<double> Solve(IModel model, Matrix<double> x, Vector<double> y)
         {
             var gradients = new ConcurrentBag<ModelParameter>();
-            var losses = Vector<double>.Build.Dense(_options.Epochs / _options.ThreadEpochs);
+            var losses = Vector<double>.Build.Dense(_options.Epochs);
             var chunks = DataUtils.GetChunks(x, y, _options.NumThreads);
-            for (var i = 0; i < _options.Epochs / _options.ThreadEpochs; i++)
+            var datasetSize = x.ColumnCount;
+            for (var i = 0; i < _options.Epochs; i++)
             {
-                ComputeGradientsParallel(gradients, chunks);
-                UpdateParameters(_model, gradients);
-                losses[i] = _model.ComputeLoss(x, y);
+                ComputeGradientsParallel(model, gradients, chunks, datasetSize);
+                UpdateParameters(model, gradients);
+                losses[i] = model.ComputeLoss(x, y);
+                gradients.Clear();
             }
-
             return losses;
         }
 
-        private Task PopulateGradients(ConcurrentBag<ModelParameter> gradients, Matrix<double> input,
-            Vector<double> target)
+        private void PopulateGradients(IModel model, ConcurrentBag<ModelParameter> gradients, Matrix<double> input,
+            Vector<double> target, int datasetSize, CountdownEvent countdownEvent = null)
         {
-            var grads = _model.ComputeGradients(input, target);
+            var grads = model.ComputeGradients(input, target);
             foreach (var (parameterName, gradientValues) in grads)
                 gradients.Add(new ModelParameter
                 {
                     Name = parameterName,
-                    Values = gradientValues
+                    Values = gradientValues * input.ColumnCount / datasetSize
                 });
-            return Task.CompletedTask;
+
+            if (countdownEvent != null)
+                countdownEvent.Signal();
         }
 
-        private void ComputeGradientsParallel(ConcurrentBag<ModelParameter> gradients,
-            IEnumerable<(Matrix<double> X, Vector<double> Y)> chunks)
+        private void ComputeGradientsParallel(IModel model, ConcurrentBag<ModelParameter> gradients,
+            IEnumerable<(Matrix<double> X, Vector<double> Y)> chunks, int datasetSize)
         {
-            IEnumerable<Task> tasks = new List<Task>();
+            var countDown = new CountdownEvent(chunks.Count());
             foreach (var (x, y) in chunks)
-                tasks.Append(Task.Factory.StartNew(
-                    () => PopulateGradients(gradients, x, y)));
-
-            Task.WhenAll(tasks);
+                ThreadPool.QueueUserWorkItem(state => PopulateGradients(model, gradients, x, y, datasetSize, countDown));
+            countDown.Wait();
         }
 
         private void UpdateParameters(IModel model, IEnumerable<ModelParameter> gradients)

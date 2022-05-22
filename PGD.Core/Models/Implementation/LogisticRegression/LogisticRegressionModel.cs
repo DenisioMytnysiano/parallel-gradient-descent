@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 using PGD.Core.Models.Interfaces;
@@ -10,19 +11,20 @@ namespace PGD.Core.Models.Implementation.LogisticRegression
     {
         private const string Bias = "Bias";
         private const string Weights = "Weights";
-        private ModelParametersList _modelParameters;
+        private readonly ModelParametersList _modelParameters;
 
         public LogisticRegressionModel()
         {
             _modelParameters = new ModelParametersList(new List<ModelParameter>());
-            InitializeParameter(Bias, Vector<double>.Build.Dense(1));
-            InitializeParameter(Weights, Vector<double>.Build.Dense(10));
         }
 
         public Vector<double> Predict(Matrix<double> x)
         {
-            return 1 / (1 + (-_modelParameters.GetModelParameter(Weights).Values * x -
-                             _modelParameters.GetModelParameter(Bias).Values).PointwiseExp());
+            var result = new List<double>();
+            foreach (var row in x.EnumerateRows())
+                result.Add(1 / (1 + Math.Exp(-_modelParameters.GetModelParameter(Weights).Values.DotProduct(row) -
+                                             _modelParameters.GetModelParameter(Bias).Values[0])));
+            return Vector<double>.Build.DenseOfEnumerable(result);
         }
 
         public Dictionary<string, Vector<double>> ComputeGradients(Matrix<double> x, Vector<double> y)
@@ -30,8 +32,8 @@ namespace PGD.Core.Models.Implementation.LogisticRegression
             var prediction = Predict(x);
             return new Dictionary<string, Vector<double>>
             {
-                [Bias] = (prediction - y) * x,
-                [Weights] = Vector<double>.Build.DenseOfEnumerable(new List<double> {(prediction - y).Average()})
+                [Bias] = Vector<double>.Build.DenseOfEnumerable(new List<double> {(prediction - y).Average()}),
+                [Weights] = (prediction - y) * x
             };
         }
 
@@ -55,9 +57,16 @@ namespace PGD.Core.Models.Implementation.LogisticRegression
             return _modelParameters;
         }
 
+        public void Initialize(int dimensionsCount)
+        {
+            InitializeParameter(Bias, Vector<double>.Build.Dense(1));
+            InitializeParameter(Weights, Vector<double>.Build.Dense(dimensionsCount));
+        }
+
         public double ComputeLoss(Matrix<double> x, Vector<double> target)
         {
-            var prediction = Predict(x);
+            var eps = 1e-5;
+            var prediction = Predict(x).PointwiseMinimum(1 - eps).PointwiseMaximum(eps);
             return -(target.PointwiseMultiply(prediction.PointwiseLog()) +
                      (1 - target).PointwiseMultiply((1 - prediction).PointwiseLog())).Average();
         }

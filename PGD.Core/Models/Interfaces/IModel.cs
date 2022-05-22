@@ -12,5 +12,6 @@ namespace PGD.Core.Models.Interfaces
         public void UpdateParameter(string parameterName, Vector<double> values);
         public ModelParameter GetParameter(string parameterName);
         public ModelParametersList GetParameters();
+        public void Initialize(int dimensionsCount);
     }
 }

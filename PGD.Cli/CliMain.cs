@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading.Channels;
 using CommandLine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +15,7 @@ using PGD.Core.Parsers.Interfaces;
 using PGD.Core.Solvers.Implementation;
 using PGD.Core.Solvers.Interfaces;
 using PGD.Core.Solvers.Options;
+using PGD.Core.Utils;
 
 namespace PGD.Cli
 {
@@ -37,7 +41,15 @@ namespace PGD.Cli
             var parser = host.Services.GetRequiredService<IParser>();
             var optimizationAlgorithm = host.Services.GetRequiredService<IGradientDescentSolver>();
             var (input, target) = parser.Parse(GlobalOptions.FilePath);
-            optimizationAlgorithm.Solve(input, target);
+            //var (input, target) = DataUtils.GetRandomInput(50000, 5, 12);
+            var model = host.Services.GetRequiredService<IModel>();
+            model.Initialize(input.ColumnCount);
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var losses = optimizationAlgorithm.Solve(model, input, target);
+            stopwatch.Stop();
+            Console.WriteLine($"Time elapsed:{stopwatch.Elapsed}");
+            Console.WriteLine($"Loss value: {losses.Last()}");
         }
 
         private static void InitializeConfiguration()
@@ -101,7 +113,6 @@ namespace PGD.Cli
             serviceCollection.Configure<ParallelMiniBatchGradientDescentOptions>(op =>
             {
                 op.Epochs = GlobalOptions.Epochs;
-                op.ThreadEpochs = GlobalOptions.ThreadEpochs;
                 op.LearningRate = GlobalOptions.LearningRate;
                 op.NumThreads = GlobalOptions.ThreadNum;
             });

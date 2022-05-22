@@ -10,23 +10,21 @@ namespace PGD.Core.Solvers.Implementation
 {
     public class IterativeGradientDescentSolver : IGradientDescentSolver
     {
-        private readonly IModel _model;
         private readonly GradientDescentOptions _options;
 
-        public IterativeGradientDescentSolver(IModel model, IOptions<GradientDescentOptions> options)
+        public IterativeGradientDescentSolver(IOptions<GradientDescentOptions> options)
         {
-            _model = model;
             _options = options.Value;
         }
 
-        public Vector<double> Solve(Matrix<double> x, Vector<double> y)
+        public Vector<double> Solve(IModel model, Matrix<double> x, Vector<double> y)
         {
             var losses = Vector<double>.Build.Dense(_options.Epochs);
             for (var i = 0; i < _options.Epochs; i++)
             {
-                var gradients = _model.ComputeGradients(x, y);
-                losses[i] = _model.ComputeLoss(x, y);
-                UpdateParameters(_model, gradients);
+                var gradients = model.ComputeGradients(x, y);
+                losses[i] = model.ComputeLoss(x, y);
+                UpdateParameters(model, gradients);
             }
 
             return losses;

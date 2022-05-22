@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 
 namespace PGD.Core.Utils
@@ -17,12 +18,24 @@ namespace PGD.Core.Utils
             for (var i = 0; i < chunkCount; i++)
             {
                 var start = i * chunkSize;
-                var x = input.SubMatrix(start, chunkCount, 0, input.ColumnCount);
-                var y = target.SubVector(start, chunkSize);
-                chunks.Add((x, y));
+                if (!(start >= input.RowCount))
+                {
+                    var x = input.SubMatrix(start, chunkSize, 0, input.ColumnCount);
+                    var y = target.SubVector(start, Math.Min(chunkSize, target.Count));
+                    chunks.Add((x, y));
+                }
             }
 
             return chunks;
+        }
+
+        public static (Matrix<double>, Vector<double>) GetRandomInput(int count, int dimensions, int seed)
+        {
+            var random = new Random(seed);
+            var x = Matrix<double>.Build.Random(count, dimensions, seed);
+            var y = Vector<double>.Build.DenseOfEnumerable(Enumerable.Range(0, count)
+                .Select(i => (double) random.Next(0, 2)));
+            return (x, y);
         }
     }
 }

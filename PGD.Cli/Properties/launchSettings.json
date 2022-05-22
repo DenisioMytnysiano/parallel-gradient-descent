@@ -3,11 +3,11 @@
   "profiles": {
     "Iterative": {
       "commandName": "Project",
-      "commandLineArgs": "--file-path ."
+      "commandLineArgs": "--file-path data1.txt"
     },
     "Parallel": {
       "commandName": "Project",
-      "commandLineArgs": "--file-path ."
+      "commandLineArgs": "--solver-type ParallelGradientDescent --file-path data1.txt"
     }
   }
 }
