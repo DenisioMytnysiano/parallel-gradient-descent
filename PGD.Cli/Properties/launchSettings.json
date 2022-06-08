@@ -3,11 +3,11 @@
   "profiles": {
     "Iterative": {
       "commandName": "Project",
-      "commandLineArgs": "--file-path data1.txt"
+      "commandLineArgs": "--epochs=1000 --file-path data1.txt --thread-num=4"
     },
     "Parallel": {
       "commandName": "Project",
-      "commandLineArgs": "--solver-type ParallelGradientDescent --file-path data1.txt"
+      "commandLineArgs": "--solver-type ParallelGradientDescent --thread-num=12 --epochs=1000 --file-path data1.txt"
     }
   }
 }

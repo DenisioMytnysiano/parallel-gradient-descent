@@ -27,10 +27,10 @@ namespace PGD.Core.Solvers.Implementation
             var gradients = new ConcurrentBag<ModelParameter>();
             var losses = Vector<double>.Build.Dense(_options.Epochs);
             var chunks = DataUtils.GetChunks(x, y, _options.NumThreads);
-            var datasetSize = x.ColumnCount;
+            var datasetSize = x.RowCount;
             for (var i = 0; i < _options.Epochs; i++)
             {
-                ComputeGradientsParallel(model, gradients, chunks, datasetSize);
+                ComputeGradientsParallel(model, gradients, chunks.Shuffle(), datasetSize);
                 UpdateParameters(model, gradients);
                 losses[i] = model.ComputeLoss(x, y);
                 gradients.Clear();
@@ -46,10 +46,10 @@ namespace PGD.Core.Solvers.Implementation
                 gradients.Add(new ModelParameter
                 {
                     Name = parameterName,
-                    Values = gradientValues * input.ColumnCount / datasetSize
+                    Values = gradientValues * input.RowCount / datasetSize
                 });
 
-            if (countdownEvent != null)
+            if (countdownEvent is not null)
                 countdownEvent.Signal();
         }
 

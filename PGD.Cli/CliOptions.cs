@@ -26,9 +26,5 @@ namespace PGD.Cli
         [Option("thread-num", Required = false, HelpText = "Number of threads in case of parallel algorithm.",
             Default = 12)]
         public int ThreadNum { get; set; }
-
-        [Option("thread-epochs", Required = false,
-            HelpText = "Number of epochs per thread in case of parallel algorithm.", Default = 10)]
-        public int ThreadEpochs { get; set; }
     }
 }

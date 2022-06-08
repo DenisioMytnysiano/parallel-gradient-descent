@@ -13,15 +13,15 @@ namespace PGD.Core.Utils
             if (input.RowCount != target.Count)
                 throw new ArgumentException("There should be equal number of X and Y samples.");
 
-            var chunkSize = (int) Math.Ceiling((double) chunkCount / target.Count);
+            var chunkSize = (int) Math.Ceiling((double) target.Count / chunkCount);
             var chunks = new List<(Matrix<double> X, Vector<double> Y)>();
             for (var i = 0; i < chunkCount; i++)
             {
                 var start = i * chunkSize;
                 if (!(start >= input.RowCount))
                 {
-                    var x = input.SubMatrix(start, chunkSize, 0, input.ColumnCount);
-                    var y = target.SubVector(start, Math.Min(chunkSize, target.Count));
+                    var x = input.SubMatrix(start, Math.Min(chunkSize, target.Count - start), 0, input.ColumnCount);
+                    var y = target.SubVector(start, Math.Min(chunkSize, target.Count - start));
                     chunks.Add((x, y));
                 }
             }

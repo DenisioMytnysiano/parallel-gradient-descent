@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Channels;
+using System.Threading;
 using CommandLine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,13 +13,11 @@ using PGD.Core.Parsers.Interfaces;
 using PGD.Core.Solvers.Implementation;
 using PGD.Core.Solvers.Interfaces;
 using PGD.Core.Solvers.Options;
-using PGD.Core.Utils;
 
 namespace PGD.Cli
 {
     public static class CliMain
     {
-        public static IConfiguration Configuration { get; set; }
         public static CliOptions GlobalOptions { get; set; }
 
         private static void Main(string[] args)
@@ -32,37 +28,40 @@ namespace PGD.Cli
 
         private static void RunOptimization()
         {
-            InitializeConfiguration();
-            
             var host = Host.CreateDefaultBuilder()
-                .ConfigureServices(ConfigureServices)
+                .ConfigureServices((ctx, sc) => ConfigureServices(sc, ctx.Configuration))
                 .Build();
 
-            var parser = host.Services.GetRequiredService<IParser>();
-            var optimizationAlgorithm = host.Services.GetRequiredService<IGradientDescentSolver>();
-            var (input, target) = parser.Parse(GlobalOptions.FilePath);
-            //var (input, target) = DataUtils.GetRandomInput(50000, 5, 12);
-            var model = host.Services.GetRequiredService<IModel>();
-            model.Initialize(input.ColumnCount);
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-            var losses = optimizationAlgorithm.Solve(model, input, target);
-            stopwatch.Stop();
-            Console.WriteLine($"Time elapsed:{stopwatch.Elapsed}");
-            Console.WriteLine($"Loss value: {losses.Last()}");
+            if (ThreadPool.SetMinThreads(1, 1) &&
+                ThreadPool.SetMaxThreads(GlobalOptions.ThreadNum, GlobalOptions.ThreadNum))
+            {
+                var parser = host.Services.GetRequiredService<IParser>();
+                var optimizationAlgorithm = host.Services.GetRequiredService<IGradientDescentSolver>();
+                var (input, target) = parser.Parse(GlobalOptions.FilePath);
+                var model = host.Services.GetRequiredService<IModel>();
+                model.Initialize(input.ColumnCount);
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                var losses = optimizationAlgorithm.Solve(model, input, target);
+                stopwatch.Stop();
+                var i = 0;
+                foreach (var loss in losses)
+                {
+                    Console.WriteLine($"Epoch {i}: {loss}");
+                    i++;
+                }
+
+                Console.WriteLine($"Time elapsed:{stopwatch.Elapsed.TotalMilliseconds} ms.");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to scale thread pool to {GlobalOptions.ThreadNum} threads.");
+            }
         }
 
-        private static void InitializeConfiguration()
+        private static void ConfigureServices(IServiceCollection serviceCollection, IConfiguration configuration)
         {
-            Configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", true)
-                .Build();
-        }
-
-        private static void ConfigureServices(HostBuilderContext context, IServiceCollection serviceCollection)
-        {
-            serviceCollection.AddOptions();
+            serviceCollection.AddOptions(configuration);
             serviceCollection.AddParser();
             serviceCollection.AddSolver();
             serviceCollection.AddModel();
@@ -102,9 +101,9 @@ namespace PGD.Cli
             serviceCollection.AddSingleton<IModel, LogisticRegressionModel>();
         }
 
-        private static void AddOptions(this IServiceCollection serviceCollection)
+        private static void AddOptions(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
-            serviceCollection.Configure<CsvParserOptions>(Configuration.GetSection("CsvOptions"));
+            serviceCollection.Configure<CsvParserOptions>(configuration.GetSection("CsvOptions"));
             serviceCollection.Configure<GradientDescentOptions>(op =>
             {
                 op.Epochs = GlobalOptions.Epochs;
